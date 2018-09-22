@@ -1,0 +1,70 @@
+#!/bin/bash
+
+if [ -f ~/.config/notify-down/conf ]; then
+    source ~/.config/notify-down/conf
+else
+    >&2 echo You need to configure NOTIFY_DOWN_FROM and NOTIFY_DOWN_TO in \~/.config/notify-down/conf
+    exit 1
+fi
+
+if [ ! -f ~/.config/notify-down/services ]; then
+    >&2 echo You need to add service definitions in \~/.config/notify-down/services
+    exit 1
+fi
+
+check() {
+    (
+    local DESC=$1 ADDRESS=$2 PORT=$3 PORT_WC=$3 TYPE=$4 LASTSTATE=1 COUNTER=0
+    ! [ "$PORT" = "" ] && PORT_WC=":$PORT"
+    for i in 1 2 3; do
+        case $TYPE in
+        ping)
+            check_ping $ADDRESS
+            ;;
+        http)
+            check_http $ADDRESS $PORT
+            ;;
+        *tls*)
+            check_tls $ADDRESS $PORT $TYPE
+            ;;
+        esac
+        if [ $? -gt 0 ]; then
+            COUNTER=$(($COUNTER + 1))
+        else
+            break
+        fi
+        [ $i -lt 3 ] && sleep 10
+    done
+    STATE_FN="/tmp/notify-down-$ADDRESS-$(tr ' ' '_' <<< $TYPE)"
+    [ -f $STATE_FN ] && LASTSTATE=0
+    if [ $COUNTER -eq 3 ] && [ $LASTSTATE -eq 1 ]; then
+        signal-cli -u "$NOTIFY_DOWN_FROM" send -m "$DESC ($ADDRESS$PORT_WC) has gone offline :'(" "$NOTIFY_DOWN_TO"
+        touch $STATE_FN
+    elif [ $COUNTER -lt 3 ] && [ $LASTSTATE -eq 0 ]; then
+        rm $STATE_FN
+        signal-cli -u "$NOTIFY_DOWN_FROM" send -m "$DESC ($ADDRESS$PORT_WC) is online again :)" "$NOTIFY_DOWN_TO"
+    fi
+    ) &
+}
+
+check_ping() {
+    [ $(ping -c 4 $1 | grep -oP ', \K\d+(?= rec)') -gt 2 ]
+}
+
+check_tls() {
+    COMMAND=("timeout" "10" "openssl" "s_client")
+    [[ "$3" == starttls* ]] && COMMAND+=("-${3% *}" "${3#* }")
+    COMMAND+=("-servername" "$1" "-connect" "$1:$2")
+    OUT=$(${COMMAND[@]}<<<"" 2> /dev/stdout 1> /dev/null)
+    [ $? -eq 0 ] && grep -q -v "verify error"<<<"$OUT"
+}
+
+check_http() {
+    curl -s http://$1:$2/ > /dev/null
+}
+
+IFS=$'\n'
+for service in $(cat ~/.config/notify-down/services); do
+    readarray -t args <<< $(tr ',' '\n' <<<"$service")
+    check "${args[0]}" "${args[1]}" "${args[2]}" "${args[3]}"
+done

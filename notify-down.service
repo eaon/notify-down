@@ -1,0 +1,9 @@
+[Unit]
+Description=Notify admin (via Signal) if services are down
+After=network-online.target
+
+[Service]
+User=notify
+Group=notify
+Type=forking
+ExecStart=/usr/local/bin/notify-down
