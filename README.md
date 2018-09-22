@@ -1,8 +1,8 @@
 # Simple Signal downtime notification for TLS, HTTP, and machines that respond to ICMP packets
 
 Depends on [signal-cli](https://github.com/AsamK/signal-cli), curl, ping,
-grep, coreutils, bash. systemd is optional, you can also run it via cron if
-you prefer that.
+grep, coreutils, bash and OpenSSL. systemd is optional, you can also run it
+via cron if you prefer that.
 
 Expects two files: `~/.config/notify-down/conf`:
 
