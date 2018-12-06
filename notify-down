@@ -20,8 +20,11 @@ fi
 
 check() {
     (
-    local DESC=$1 ADDRESS=$2 PORT=$3 PORT_WC=$3 TYPE=$4 LASTSTATE=1 COUNTER=0
-    ! [ "$PORT" = "" ] && PORT_WC=":$PORT"
+    local DESC=$1 ADDRESS=$2 PORT=$3 PORT_WC=$3 PORT_WD=$3 TYPE=$4 LASTSTATE=1 COUNTER=0
+    if ! [ "$PORT" = "" ]; then
+        PORT_WC=":$PORT"
+        PORT_WD="-$PORT"
+    fi
     for i in 1 2 3; do
         case $TYPE in
         ping*)
@@ -41,7 +44,7 @@ check() {
         fi
         [ $i -lt 3 ] && sleep 10
     done
-    STATE_FN="/tmp/notify-down-$ADDRESS-$(tr ' ' '_' <<< $TYPE)"
+    STATE_FN="/tmp/notify-down-$ADDRESS$PORTWD-$(tr ' ' '_' <<< $TYPE)"
     [ -f $STATE_FN ] && LASTSTATE=0
     if [ $COUNTER -eq 3 ] && [ $LASTSTATE -eq 1 ]; then
         notify "$DESC" "$ADDRESS" "$PORT_WC" "has gone offline :'("
