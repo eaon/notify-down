@@ -36,6 +36,9 @@ check() {
         *tls*)
             check_tls $ADDRESS $PORT $TYPE
             ;;
+        tcp)
+            check_tcp $ADDRESS $PORT
+            ;;
         esac
         if [ $? -gt 0 ]; then
             COUNTER=$(($COUNTER + 1))
@@ -73,6 +76,10 @@ check_tls() {
 
 check_http() {
     curl -s http://$1:$2/ > /dev/null
+}
+
+check_tcp() {
+    nc -z $1 $2
 }
 
 notify() {
