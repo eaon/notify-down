@@ -97,3 +97,8 @@ for service in $(cat ~/.config/notify-down/services); do
     readarray -t args <<< $(tr ',' '\n' <<<"$service")
     check "${args[0]}" "${args[1]}" "${args[2]}" "${args[3]}"
 done
+
+if [ "$NOTIFY_DOWN_SLACK" = "" ]; then
+    sleep 5
+    signal-cli -u "$NOTIFY_DOWN_FROM" receive > /dev/null
+fi
